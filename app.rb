@@ -72,5 +72,5 @@ get '/' do
         </ul>
       </section>
     HTML
-  end.join("\n")
+  end.join("\n") + '<hr /><p>Source code is <a href="https://github.com/pocke/rbver" target="_blank">here</a></p>'
 end
