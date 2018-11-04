@@ -61,7 +61,8 @@ end
 get '/' do
   files = ruby_versions
 
-  files.map do |k, versions|
+  content = +'<h1>Ruby Versions</h1>'
+  content << files.map do |k, versions|
     <<~HTML
       <section>
         <h2>#{k}</h2>
@@ -72,5 +73,7 @@ get '/' do
         </ul>
       </section>
     HTML
-  end.join("\n") + '<hr /><p>Source code is <a href="https://github.com/pocke/rbver" target="_blank">here</a></p>'
+  end.join("\n")
+  content << '<hr /><p>Source code is <a href="https://github.com/pocke/rbver" target="_blank">here</a></p>'
+  content
 end
