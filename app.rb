@@ -34,6 +34,34 @@ end
 
 RUBY_VERSION_CACHE = CacheStore.new
 
+# Gem::Version treats -pXXX as preview version.
+# This class treats -pXXX as patch version.
+class RubyVersionCompare
+  include Comparable
+
+  PATCH_REGEXP = /-p(\d+)$/
+
+  def initialize(version_str)
+    if patch = version_str[PATCH_REGEXP, 1]
+      version_str = version_str.sub(PATCH_REGEXP, ".#{patch}")
+    end
+    @gem_version = Gem::Version.new(version_str)
+  end
+
+  def <=>(right)
+    self.gem_version <=> right.gem_version
+  end
+
+  protected
+
+  attr_reader :gem_version
+end
+# testing
+raise unless RubyVersionCompare.new('2.0.0-p0') > RubyVersionCompare.new('2.0.0-rc2')
+raise unless RubyVersionCompare.new('2.0.0-p0') > RubyVersionCompare.new('1.9.3-p551')
+raise unless RubyVersionCompare.new('2.1.0-rc1') > RubyVersionCompare.new('2.0.0-p648')
+raise unless RubyVersionCompare.new('2.1.0-p648') > RubyVersionCompare.new('2.0.0-p247')
+
 def ruby_version_group(v)
   s = v.split('.')
   if s[0] == '1'
@@ -67,7 +95,7 @@ def ruby_versions
           .reject{|v| v.end_with?('-stable')}
         [prefix.split('/').last, versions]
       }
-      .map {|k, v| [k, v.sort_by{|x| Gem::Version.new(x)}.reverse]}
+      .map {|k, v| [k, v.sort_by{|x| RubyVersionCompare.new(x)}.reverse]}
       .reverse
       .to_h
   end
