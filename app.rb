@@ -42,17 +42,32 @@ def ruby_version_group(v)
   return s[0..1].join('.')
 end
 
+def api_url_for(prefix)
+  "http://ftp.ruby-lang.org/?list-type=2&delimiter=/&prefix=#{prefix}"
+end
+
+def get(uri)
+  res = Net::HTTP.get(URI.parse(uri))
+  REXML::Document.new(res)
+end
+
 def ruby_versions
   RUBY_VERSION_CACHE.fetch do
-    res = Net::HTTP.get(URI.parse('http://ftp.ruby-lang.org/?list-type=2&delimiter=/&prefix=pub/ruby/'))
-    doc = REXML::Document.new(res)
-    REXML::XPath.match(doc, '/ListBucketResult/Contents/Key')
+    doc = get(api_url_for('pub/ruby/'))
+    REXML::XPath.match(doc, '/ListBucketResult/CommonPrefixes/Prefix')
       .map(&:text)
-      .select{|f| f.start_with?('pub/ruby/ruby-') && f =~ /\.zip/}
-      .map{|f| f[%r!^pub/ruby/ruby-(.+)\.zip$!, 1]}
-      .reject{|v| v.end_with?('-stable')}
-      .group_by{|v| ruby_version_group(v)}
-      .map {|k, v| [k, v.sort_by{|x| Gem::Version.new(x)}]}
+      .grep(%r!^pub/ruby/\d+\.\d+[a-d]?/$!)
+      .select{|prefix| Gem::Version.new(prefix.split('/').last) >= Gem::Version.new('1.8')}
+      .map{|prefix| [prefix, get(api_url_for(prefix))]}
+      .map{|prefix, d|
+        versions = REXML::XPath.match(d, '/ListBucketResult/Contents/Key')
+          .map(&:text)
+          .select{|f| f.start_with?(%r!pub/ruby/[^/]+/ruby-!) && f =~ /\.zip/}
+          .map{|f| f[%r!^pub/ruby/[^/]+/ruby-(.+)\.zip$!, 1]}
+          .reject{|v| v.end_with?('-stable')}
+        [prefix.split('/').last, versions]
+      }
+      .map {|k, v| [k, v.sort_by{|x| Gem::Version.new(x)}.reverse]}
       .reverse
       .to_h
   end
