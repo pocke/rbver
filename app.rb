@@ -2,7 +2,6 @@ require 'sinatra'
 require 'rexml/document'
 require 'net/http'
 require 'json'
-require 'pp'
 
 class CacheStore
   Expire = 5 * 60 # 5 min
